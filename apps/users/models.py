@@ -1,6 +1,9 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
+from django.utils import timezone
+from rest_framework.exceptions import NotFound
 
+from apps.utils import messages
 
 class User(AbstractUser):
     email = models.EmailField(unique=True, db_index=True)
@@ -26,9 +29,27 @@ class User(AbstractUser):
 
     @classmethod
     def create(cls, name: str, email: str, password: str):
-        user = cls()
+        user = cls(is_active=True)
         user.set_name(name)
         user.set_email(email)
         user.set_password(password)
         user.save()
+        return user
+
+    @classmethod
+    def get_by_email(cls, value: str, raise_exception: bool = False):
+        user = cls.objects.filter(email=value).first()
+        if not user and raise_exception:
+            raise NotFound(messages.USER_NOT_FOUND)
+        return user
+
+    def update_last_login(self):
+        self.last_login = timezone.now()
+        self.save()
+
+    @classmethod
+    def authenticate(cls, email: str, password: str):
+        user = cls.get_by_email(email)
+        if user is None or not user.check_password(password):
+            raise NotFound(messages.USER_AUTHENTICATION_FAILED)
         return user
