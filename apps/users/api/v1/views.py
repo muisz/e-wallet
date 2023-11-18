@@ -45,3 +45,6 @@ class AuthView(GenericViewSet):
 
         response_serializer = self.serializer_class(user, context=self.get_serializer_context())
         return Response(response_serializer.data)
+
+
+auth_view = AuthView

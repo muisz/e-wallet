@@ -2,10 +2,9 @@ from django.test import TestCase
 from factory import faker
 from faker import Faker
 from rest_framework.exceptions import NotFound
-
 from apps.users.models import User
 from apps.utils import messages
-from apps.utils.tests import assert_raise_error
+from apps.utils.decorators import assert_raise_error
 
 fake = Faker()
 
@@ -63,6 +62,24 @@ class UserTestCase(TestCase):
         user_from_method = User.get_by_email(email)
 
         self.assertEqual(user_from_method, user)
+        
+    @assert_raise_error(NotFound(messages.USER_NOT_FOUND))
+    def test_get_by_id_method_raise_error(self):
+        User.get_by_id(0, raise_exception=True)
+
+    def test_get_by_id_method_return_none(self):
+        user = User.get_by_id(0)
+
+        self.assertIsNone(user)
+    
+    def test_get_by_id_method(self):
+        name = fake.name()
+        email = fake.email()
+        password = fake.password()
+        user = User.create(name, email, password)
+        user_from_method = User.get_by_id(user.id)
+
+        self.assertEqual(user_from_method, user)
 
     def test_update_last_login_method(self):
         name = fake.name()
@@ -79,5 +96,7 @@ class UserTestCase(TestCase):
         password = fake.password()
         user = User.create(name, email, password)
         user_from_method = User.authenticate(email, password)
+
+
 
         self.assertEqual(user_from_method, user)

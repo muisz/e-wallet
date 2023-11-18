@@ -13,6 +13,7 @@ class User(AbstractUser):
 
     def set_email(self, value: str):
         self.email = value.lower()
+        self.username = self.email
     
     def set_name(self, value: str):
         names = value.split(' ')
@@ -39,6 +40,13 @@ class User(AbstractUser):
     @classmethod
     def get_by_email(cls, value: str, raise_exception: bool = False):
         user = cls.objects.filter(email=value).first()
+        if not user and raise_exception:
+            raise NotFound(messages.USER_NOT_FOUND)
+        return user
+    
+    @classmethod
+    def get_by_id(cls, value: id, raise_exception: bool = False):
+        user = cls.objects.filter(id=value).first()
         if not user and raise_exception:
             raise NotFound(messages.USER_NOT_FOUND)
         return user
