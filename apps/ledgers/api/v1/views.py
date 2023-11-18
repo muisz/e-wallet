@@ -10,6 +10,7 @@ from apps.ledgers.api.v1.serializers import (
     DetailTransactionSerializer,
     ListLedgerSerializer,
     ListTransactionSerializer,
+    SendToSerializer,
 )
 from apps.ledgers.models import Ledger, Transaction
 from apps.modules.instamoney import RNE
@@ -53,6 +54,16 @@ class LedgerViewSet(GenericViewSet):
         banks = RNE().list_banks()
         return Response(banks)
 
+    @action(methods=['post'], detail=True, serializer_class=SendToSerializer, url_path='send-to')
+    def send_to(self, request, pk):
+        serializer = self.serializer_class(data=request.data, context=self.get_serializer_context())
+        serializer.is_valid(raise_exception=True)
+        validated_data = serializer.validated_data
+
+        ledger = Ledger.get_ledger(pk, raise_exception=True)
+        ledger.send_to(serializer.get_ledger(), validated_data['amount'])
+
+        return Response(None)
 
 class TransactionViewSet(GenericViewSet):
     permission_classes = (permissions.IsAuthenticated,)

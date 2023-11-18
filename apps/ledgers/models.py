@@ -87,7 +87,7 @@ class Ledger(BaseModel):
         notes: Union[str, None] = None,
     ):
         if not self.is_balance_sufficient(amount):
-            raise Exception(messages.LEDGER_CANNOT_INSUFFICIENT_BALANCE)
+            raise Exception(messages.LEDGER_INSUFFICIENT_BALANCE)
         
         transaction = Transaction.create_debit_transaction(
             ledger=self,
@@ -133,6 +133,25 @@ class Ledger(BaseModel):
     def set_status(self, value: str, notes: Union[str, None] = None):
         self.status = value
         LedgerStatusHistory.create(self, value, notes)
+    
+    def send_to(self, other_ledger, amount):
+        if not self.is_balance_sufficient(amount):
+            raise Exception(messages.LEDGER_INSUFFICIENT_BALANCE)
+        
+        self.create_debit_transaction(
+            amount=amount,
+            bank_account_name=other_ledger.bank_code,
+            account_name=other_ledger.name,
+            account_number=other_ledger.virtual_account,
+            notes='Send money',
+        )
+        other_ledger.create_credit_transaction(
+            amount=amount,
+            bank_account_name=self.bank_code,
+            account_name=self.name,
+            account_number=self.virtual_account,
+            notes='Receive money',
+        )
 
 
 class Transaction(BaseModel):
@@ -173,6 +192,7 @@ class Transaction(BaseModel):
             account_name=account_name,
             account_number=account_number,
             notes=notes,
+            created_at=timezone.now(),
         )
         transaction.set_id()
         transaction.set_reference(reference)
@@ -198,6 +218,7 @@ class Transaction(BaseModel):
             account_name=account_name,
             account_number=account_number,
             notes=notes,
+            created_at=timezone.now(),
         )
         transaction.set_id()
         transaction.set_reference(reference)

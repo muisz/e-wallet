@@ -119,3 +119,18 @@ class CreateTransactionSerializer(serializers.Serializer):
     account_name = serializers.CharField(allow_null=True)
     account_number = serializers.CharField(allow_null=True)
     notes = serializers.CharField(allow_null=True)
+
+
+class SendToSerializer(serializers.Serializer):
+    ledger = serializers.IntegerField()
+    amount = serializers.IntegerField()
+
+    _ledger = None
+
+    def validate_ledger(self, value):
+        ledger = Ledger.get_ledger(value, raise_exception=True)
+        self._ledger = ledger
+        return value
+    
+    def get_ledger(self):
+        return self._ledger

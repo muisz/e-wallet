@@ -76,7 +76,7 @@ class LedgerTestCase(TestCase):
         self.assertIsNotNone(transaction)
         self.assertEqual(ledger.balance, 10000)
 
-    @assert_raise_error(Exception(messages.LEDGER_CANNOT_INSUFFICIENT_BALANCE))
+    @assert_raise_error(Exception(messages.LEDGER_INSUFFICIENT_BALANCE))
     def test_create_debit_transaction_method_raise_error(self):
         ledger = create_ledger()
         ledger.balance = 20000
