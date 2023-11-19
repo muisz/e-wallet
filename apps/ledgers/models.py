@@ -323,7 +323,6 @@ class Transaction(BaseModel):
     
     def get_last_transaction(self, in_month: datetime):
         return Transaction.objects.filter(
-            ledger=self.ledger,
             created_at__year=in_month.year,
             created_at__month=in_month.month,
         ).order_by('-id').first()
