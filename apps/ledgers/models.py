@@ -24,6 +24,7 @@ class Ledger(BaseModel):
     balance = models.IntegerField()
     reference = models.CharField(max_length=100, unique=True)
     bank_code = models.CharField(max_length=20)
+    external_id = models.CharField(max_length=100, null=True)
 
     ACTIVE = '1'
     INACTIVE = '2'
@@ -38,10 +39,11 @@ class Ledger(BaseModel):
     @classmethod
     def create(cls, user: User, name: str, bank_code: str):
         rne = RNE()
+        external_id = str(uuid.uuid4())
         virtual_account = rne.create_virtual_account(
             name=name,
             bank_code=bank_code,
-            external_id=str(user.id),
+            external_id=external_id,
         )
 
         ledger = cls(
@@ -52,6 +54,7 @@ class Ledger(BaseModel):
             reference=virtual_account.get("id"),
             status=Ledger.PENDING,
             bank_code=bank_code,
+            external_id=external_id,
         )
         ledger.save()
         ledger.set_status(Ledger.PENDING, "Initial Ledger")
@@ -102,6 +105,13 @@ class Ledger(BaseModel):
         self.save()
         return transaction
     
+    @classmethod
+    def get_ledger_from_reference(cls, value: str, raise_exception: bool = False):
+        ledger = Ledger.objects.filter(reference=value).first()
+        if not ledger and raise_exception:
+            raise NotFound(messages.LEDGER_NOT_FOUND)
+        return ledger
+    
     def create_credit_transaction(
         self,
         amount: str,
@@ -132,6 +142,7 @@ class Ledger(BaseModel):
     
     def set_status(self, value: str, notes: Union[str, None] = None):
         self.status = value
+        self.save()
         LedgerStatusHistory.create(self, value, notes)
     
     def send_to(self, other_ledger, amount):
@@ -152,6 +163,24 @@ class Ledger(BaseModel):
             account_number=self.virtual_account,
             notes='Receive money',
         )
+    
+    def update_from_callback(self, data: dict):
+        # https://docs.instamoney.co/apireference/#fixed-virtual-account-callback
+        self.bank_code = data.get('bank_code')
+        self.virtual_account = data.get('account_number')
+
+        status = self.status
+        status_from_callback = data.get('status')
+        if status_from_callback == 'ACTIVE':
+            status = self.ACTIVE
+        elif status_from_callback == 'PENDING':
+            status = self.PENDING
+        elif status_from_callback == 'INACTIVE':
+            status = self.INACTIVE
+        
+        if status != self.status:
+            self.set_status(status, 'Callback from instamoney')
+        self.save()
 
 
 class Transaction(BaseModel):

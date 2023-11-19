@@ -111,7 +111,36 @@ class TransactionViewSet(GenericViewSet):
         transaction = Transaction.get_transaction(pk, raise_exception=True)
         serializer = DetailTransactionSerializer(transaction, context=self.get_serializer_context())
         return Response(serializer.data)
+
+
+class CallbackViewSet(GenericViewSet):
+    permission_classes = ()
+    serializer_class = None
+    rne = RNE()
+
+    @action(methods=['post'], detail=False, url_path='fixed-virtual-account-created')
+    def fixed_virtual_account_created_callback(self, request):
+        self.rne.verificate_callback(request)
+        callback_data = request.data
+        ledger = Ledger.get_ledger_from_reference(callback_data.get('id'), raise_exception=True)
+        ledger.update_from_callback(callback_data)
+        return Response(None)
     
+    @action(methods=['post'], detail=False, url_path='fixed-virtual-account-payment')
+    def fixed_virtual_account_payment_callback(self, request):
+        self.rne.verificate_callback(request)
+        callback_data = request.data
+        ledger = Ledger.get_ledger_from_reference(callback_data.get('callback_virtual_account_id'), raise_exception=True)
+        ledger.create_credit_transaction(
+            amount=callback_data.get('amount'),
+            bank_account_name=callback_data.get('bank_code'),
+            account_name=callback_data.get('sender_name'),
+            account_number=callback_data.get('account_number'),
+            reference=callback_data.get('payment_id'),
+        )
+        return Response(None)
+
 
 ledger_view = LedgerViewSet
 transaction_view = TransactionViewSet
+callback_view = CallbackViewSet

@@ -35,6 +35,11 @@ class Instamoney:
 
     def get_auth(self):
         return (self.SECRET_KEY, '')
+    
+    def verificate_callback(self, request):
+        token = request.headers.get('x-callback-token')
+        if str(token) != str(settings.INSTAMONEY_WEBHOOK_VERIFICATION_TOKEN):
+            raise InstamoneyError('Invalid callback token')
 
 class RNE(Instamoney):
 
